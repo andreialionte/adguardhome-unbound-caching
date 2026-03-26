@@ -1,19 +1,16 @@
 # syntax=docker/dockerfile:1.7
-ARG ALPINE_VERSION=3.23
-ARG DOTNET_VERSION=10.0
 
 #############################################
 # Stage 1: Builder (Compiles Unbound)
 #############################################
-FROM alpine:${ALPINE_VERSION} AS builder
+FROM alpine:3.23 AS unbound_builder
 
 ARG UNBOUND_URL="https://nlnetlabs.nl/downloads/unbound/unbound-latest.tar.gz"
-ARG AGH_VERSION
 ARG TARGETARCH
 
 WORKDIR /build
 
-# Install all packages required for compiling (build-base, and -dev versions of dependencies)
+# Install build dependencies
 RUN apk add --no-cache \
     build-base \
     curl \
@@ -46,66 +43,54 @@ RUN set -eux; \
     make -j$(nproc); \
     make install DESTDIR=/build/install
 
-# Download and unpack AdGuard Home
+#############################################
+# Stage 2: Download AdGuard Home
+#############################################
+FROM alpine:3.23 AS agh_downloader
+
+ARG AGH_VERSION
+ARG TARGETARCH
+
+WORKDIR /build
+RUN apk add --no-cache wget
+
 RUN wget -O /build/AdGuardHome.tar.gz "https://github.com/AdguardTeam/AdGuardHome/releases/download/${AGH_VERSION}/AdGuardHome_linux_${TARGETARCH}.tar.gz" && \
     mkdir -p /build/agh && \
     tar -xzf /build/AdGuardHome.tar.gz -C /build/agh
 
 #############################################
-# Stage 2: Builder (Compiles Garnet)
+# Stage 3: Runtime (Pre-built Garnet + Unbound + AdGuard)
 #############################################
-FROM mcr.microsoft.com/dotnet/sdk:10.0-bookworm AS garnet_builder
+FROM ghcr.io/microsoft/garnet-alpine:latest
 
 ARG TARGETARCH
 
-WORKDIR /build
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
-
-RUN git clone --depth 1 https://github.com/microsoft/garnet.git source
-
-WORKDIR /build/source/main/GarnetServer
-RUN set -eux; \
-    case "${TARGETARCH}" in \
-      amd64) RID="linux-x64" ;; \
-      arm64) RID="linux-arm64" ;; \
-      *) echo "Unsupported TARGETARCH=${TARGETARCH}"; exit 1 ;; \
-    esac; \
-    dotnet publish -c Release -f net10.0 -r "${RID}" --self-contained true -o /build/garnet-publish
-
-#############################################
-# Stage 3: Runtime Base
-#############################################
-FROM dhi.io/alpine-base:3.22-alpine3.22-dev AS runtime
-
-# Install runtime-only packages
+# Install runtime dependencies
 RUN apk add --no-cache \
-    tini \
     ca-certificates \
-    netcat-openbsd \
     libevent \
     hiredis \
     expat \
     libcap \
-    openssl
+    openssl \
+    tini
 
 # Create Unbound user and necessary directories
 RUN addgroup -S unbound && adduser -S unbound -G unbound \
-    && mkdir -p /etc/unbound/var \
+    && mkdir -p /etc/unbound/var /config /config/garnet /config/unbound /config/AdGuardHome /opt/adguardhome/work \
     && chown -R unbound:unbound /etc/unbound
 
-# Copy compiled Unbound files from the builder stage
-COPY --from=builder /build/install/usr/sbin/unbound /usr/sbin/unbound
-COPY --from=builder /build/install/usr/sbin/unbound-anchor /usr/sbin/unbound-anchor
-COPY --from=builder /build/install/usr/sbin/unbound-checkconf /usr/sbin/unbound-checkconf
-COPY --from=builder /build/install/usr/sbin/unbound-control /usr/sbin/unbound-control
+# Copy compiled Unbound from builder
+COPY --from=unbound_builder /build/install/usr/sbin/unbound /usr/sbin/unbound
+COPY --from=unbound_builder /build/install/usr/sbin/unbound-anchor /usr/sbin/unbound-anchor
+COPY --from=unbound_builder /build/install/usr/sbin/unbound-checkconf /usr/sbin/unbound-checkconf
+COPY --from=unbound_builder /build/install/usr/sbin/unbound-control /usr/sbin/unbound-control
+COPY --from=unbound_builder /build/install/usr/lib/libunbound.so* /usr/lib/
 
-# Copy AdGuardHome binary
-COPY --from=builder /build/agh/AdGuardHome/AdGuardHome /opt/AdGuardHome/AdGuardHome
+# Copy AdGuard Home binary
+COPY --from=agh_downloader /build/agh/AdGuardHome/AdGuardHome /opt/AdGuardHome/AdGuardHome
 
-# Copy Garnet server binary
-COPY --from=garnet_builder /build/garnet-publish/GarnetServer /usr/local/bin/GarnetServer
-
-# Copy local configuration files and entrypoint script
+# Copy configuration files and entrypoint
 COPY config/ /config_default
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
@@ -118,5 +103,5 @@ EXPOSE 53/tcp 53/udp 67/udp 68/udp 80/tcp 443/tcp 443/udp \
 # Set configuration environment variable
 ENV XDG_CONFIG_HOME=/config
 
-# Use tini as the parent process manager for signal handling
+# Use tini as init process for proper signal handling
 ENTRYPOINT ["/sbin/tini", "--", "/entrypoint.sh"]
