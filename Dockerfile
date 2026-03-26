@@ -48,7 +48,7 @@ RUN set -eux; \
 #############################################
 FROM alpine:3.23 AS agh_downloader
 
-ARG AGH_VERSION=${AGH_VERSION:-v0.107.73}
+ARG AGH_VERSION=v0.107.73
 ARG TARGETARCH
 
 WORKDIR /build
@@ -75,6 +75,9 @@ RUN set -eux; \
 FROM ghcr.io/microsoft/garnet-alpine:latest
 
 ARG TARGETARCH
+
+# Explicitly run as root for package management
+USER root
 
 # Update APK cache and install runtime dependencies
 RUN apk update && apk add --no-cache \
