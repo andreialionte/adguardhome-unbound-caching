@@ -65,15 +65,14 @@ FROM ghcr.io/microsoft/garnet-alpine:latest
 
 ARG TARGETARCH
 
-# Install runtime dependencies
-RUN apk add --no-cache \
+# Update APK cache and install runtime dependencies
+RUN apk update && apk add --no-cache \
     ca-certificates \
     libevent \
     hiredis \
     expat \
     libcap \
-    openssl \
-    tini
+    openssl
 
 # Create Unbound user and necessary directories
 RUN addgroup -S unbound && adduser -S unbound -G unbound \
