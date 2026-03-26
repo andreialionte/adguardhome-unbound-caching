@@ -95,7 +95,7 @@ else
 fi
 # --- 5. Start Services ---
 echo "Starting Garnet server in foreground..."
-/usr/local/bin/GarnetServer \
+garnet \
   --config-import-path /config/garnet/redis.conf \
   --config-import-format RedisConf \
   --bind 127.0.0.1 \
