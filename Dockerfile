@@ -86,7 +86,8 @@ RUN apk update && apk add --no-cache \
     hiredis \
     expat \
     libcap \
-    openssl
+    openssl \
+    tini
 
 # Create Unbound user and necessary directories
 RUN addgroup -S unbound && adduser -S unbound -G unbound \
