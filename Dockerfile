@@ -48,13 +48,15 @@ RUN set -eux; \
 #############################################
 FROM alpine:3.23 AS agh_downloader
 
-ARG AGH_VERSION
+ARG AGH_VERSION=${AGH_VERSION:-v0.107.73}
 ARG TARGETARCH
 
 WORKDIR /build
 RUN apk add --no-cache wget
 
-RUN wget -O /build/AdGuardHome.tar.gz "https://github.com/AdguardTeam/AdGuardHome/releases/download/${AGH_VERSION}/AdGuardHome_linux_${TARGETARCH}.tar.gz" && \
+RUN set -eux; \
+    echo "Downloading AdGuard Home version: ${AGH_VERSION}"; \
+    wget -O /build/AdGuardHome.tar.gz "https://github.com/AdguardTeam/AdGuardHome/releases/download/${AGH_VERSION}/AdGuardHome_linux_${TARGETARCH}.tar.gz" && \
     mkdir -p /build/agh && \
     tar -xzf /build/AdGuardHome.tar.gz -C /build/agh
 
