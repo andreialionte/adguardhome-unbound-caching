@@ -94,19 +94,8 @@ else
   echo "DNSSEC root trust anchor already exists."
 fi
 # --- 5. Start Services ---
-echo "Starting Garnet server in foreground..."
-garnet \
-  --config-import-path /config/garnet/redis.conf \
-  --config-import-format RedisConf \
-  --bind 127.0.0.1 \
-  --port 6379 \
-  --no-obj true \
-  --index "${GARNET_INDEX_SIZE:-16m}" \
-  --index-max-size "${GARNET_INDEX_MAX_SIZE:-64m}" \
-  --memory "${GARNET_MEMORY_SIZE:-128m}" \
-  --checkpointdir /config/garnet/checkpoints \
-  --logdir /config/garnet/data &
-GARNET_PID=$!
+# NOTE: Garnet is now a separate Docker service, not started here.
+# If running without docker-compose, you can start Garnet separately before this container.
 
 echo "Starting Unbound DNS server..."
 unbound -d -c /config/unbound/unbound.conf &
