@@ -48,17 +48,26 @@ RUN set -eux; \
 #############################################
 FROM alpine:3.23 AS agh_downloader
 
-ARG AGH_VERSION=${AGH_VERSION:-v0.107.72}
+ARG AGH_VERSION=${AGH_VERSION:-v0.107.73}
 ARG TARGETARCH
 
 WORKDIR /build
+
+# Ensure /build is writable and has proper permissions
+RUN mkdir -p /build && chmod 777 /build
+
 RUN apk add --no-cache wget
 
 RUN set -eux; \
-    echo "Downloading AdGuard Home version: ${AGH_VERSION}"; \
-    wget -O /build/AdGuardHome.tar.gz "https://github.com/AdguardTeam/AdGuardHome/releases/download/${AGH_VERSION}/AdGuardHome_linux_${TARGETARCH}.tar.gz" && \
+    VERSION="${AGH_VERSION}"; \
+    ARCH="${TARGETARCH}"; \
+    echo "Downloading AdGuard Home version: ${VERSION} for ${ARCH}"; \
+    URL="https://github.com/AdguardTeam/AdGuardHome/releases/download/${VERSION}/AdGuardHome_linux_${ARCH}.tar.gz"; \
+    echo "URL: ${URL}"; \
+    wget --timeout=30 -O /build/AdGuardHome.tar.gz "${URL}" || { echo "Download failed"; exit 1; }; \
     mkdir -p /build/agh && \
-    tar -xzf /build/AdGuardHome.tar.gz -C /build/agh
+    tar -xzf /build/AdGuardHome.tar.gz -C /build/agh && \
+    ls -la /build/agh
 
 #############################################
 # Stage 3: Runtime (Pre-built Garnet + Unbound + AdGuard)
