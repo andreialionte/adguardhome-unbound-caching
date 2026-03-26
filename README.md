@@ -78,7 +78,7 @@ docker compose version
 For Linux/macOS users - **fully automated setup in 60 seconds:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/andreialionte/adguard-unbound-caching/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/andreialionte/adguardhome-unbound-caching/main/install.sh | sh
 ```
 
 **What it does automatically:**
@@ -102,7 +102,7 @@ DNS is live on:   localhost:53 (TCP/UDP)
 **With custom directory & verbose output:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/andreialionte/adguard-unbound-caching/main/install.sh | sh -s -- -d /opt/dns -v
+curl -fsSL https://raw.githubusercontent.com/andreialionte/adguardhome-unbound-caching/main/install.sh | sh -s -- -d /opt/dns -v
 ```
 
 **Available flags:**
@@ -130,8 +130,8 @@ For Windows, or users who prefer to review config before starting:
 
 ```bash
 # 1. Clone and enter directory
-git clone https://github.com/andreialionte/adguard-unbound-caching.git
-cd adguard-unbound-caching
+git clone https://github.com/andreialionte/adguardhome-unbound-caching.git
+cd adguardhome-unbound-caching
 
 # 2. Copy environment template (optional)
 cp .env.example .env
@@ -147,8 +147,8 @@ docker compose up -d
 **Step 1: Clone Repository**
 
 ```bash
-git clone https://github.com/andreialionte/adguard-unbound-caching.git
-cd adguard-unbound-caching
+git clone https://github.com/andreialionte/adguardhome-unbound-caching.git
+cd adguardhome-unbound-caching
 ```
 
 **Step 2: Review Configuration (Optional)**
@@ -366,7 +366,7 @@ spec:
     spec:
       containers:
       - name: adguard-dns
-        image: yourusername/adguard-unbound-caching:latest
+        image: andreialionte/adguardhome-unbound-caching:latest  # Replace 'andreialionte' with your registry
         imagePullPolicy: Always
         ports:
         - name: dns-tcp
@@ -864,9 +864,13 @@ We provide pre-built multi-arch images on:
 - **Docker Hub**: `imthai/adguardhome-unbound-garnet:latest`
   - Platforms: `linux/amd64`, `linux/arm64`
 
-- **GitHub Container Registry**: `ghcr.io/yourusername/adguard-unbound-garnet:latest`
+> [!NOTE]
+> **Building your own?** When you push to your registries, replace placeholders with your username or organization.
 
-- **Hardened Image Registry**: `dhi.io/yourusername/adguard-unbound-garnet:latest`
+When you build and push your custom images:
+
+- **GitHub Container Registry**: `ghcr.io/andreialionte/adguardhome-unbound-caching:latest` (replace `andreialionte` with your username)
+- **Docker Hub**: `andreialionte/adguardhome-unbound-caching:latest` (replace `andreialionte` with your username)
 
 ---
 
@@ -874,14 +878,16 @@ We provide pre-built multi-arch images on:
 
 ```bash
 # Build single-arch (your current host's arch)
-docker build -t adguard-unbound-garnet:latest .
+docker build -t adguardhome-unbound-caching:latest .
 
 # Build multi-arch (requires buildx)
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t yourusername/adguard-unbound-garnet:latest \
+  -t andreialionte/adguardhome-unbound-caching:latest \
   --push .
 ```
+
+Replace `andreialionte` with your Docker Hub username.
 
 ---
 
@@ -948,15 +954,6 @@ MIT License - See [LICENSE](LICENSE) file
 - [Unbound](https://nlnetlabs.nl/projects/unbound/about/) - Recursive DNS
 - [Garnet](https://github.com/microsoft/garnet) - Cache store by Microsoft
 - [Docker Hardened Images](https://dhi.io/) - Base image security
-
----
-
-## 📞 Support & Community
-
-- 📖 **Docs**: README + inline configuration comments
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/adguard-unbound-caching/issues)
-- 💬 **Discussion**: [GitHub Discussions](https://github.com/yourusername/adguard-unbound-caching/discussions)
-- 🔒 **Security**: Report privately to security@example.com
 
 ---
 

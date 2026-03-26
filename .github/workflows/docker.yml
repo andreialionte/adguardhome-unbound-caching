@@ -71,6 +71,6 @@ jobs:
             
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/adguardhome-unbound-garnet:${{ env.TAG_VALUE }}
-            ghcr.io/imthai/adguardhome-unbound-garnet:${{ env.TAG_VALUE }}
             ${{ secrets.DOCKERHUB_USERNAME }}/adguardhome-unbound-garnet:latest
-            ghcr.io/imthai/adguardhome-unbound-garnet:latest
+            ghcr.io/${{ github.repository_owner }}/adguardhome-unbound-garnet:${{ env.TAG_VALUE }}
+            ghcr.io/${{ github.repository_owner }}/adguardhome-unbound-garnet:latest

@@ -14,7 +14,7 @@ set -e -f -u
 # Script Configuration - Defaults
 # ============================================================================
 
-readonly REPO_URL='https://github.com/andreialionte/adguard-unbound-caching'
+readonly REPO_URL='https://github.com/andreialionte/adguardhome-unbound-caching'
 readonly REPO_RAW="${REPO_URL}/raw/main"
 readonly SCRIPT_URL="${REPO_RAW}/install.sh"
 
