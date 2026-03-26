@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  adguard-dns:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: adguard-unbound-caching
+    hostname: adguard-dns
+    
+    # Network configuration
+    networks:
+      - dns_network
+    
+    # Port mappings (DNS and AdGuard Web UI)
+    ports:
+      - "53:53/tcp"           # DNS TCP
+      - "53:53/udp"           # DNS UDP
+      - "67:67/udp"           # DHCP (optional)
+      - "68:68/udp"           # DHCP (optional)
+      - "3000:3000/tcp"       # AdGuard Home Web UI
+      - "3000:3000/udp"       # AdGuard Home QUIC
+      - "5443:5443/tcp"       # AdGuard HTTPS (optional)
+      - "5443:5443/udp"       # AdGuard QUIC (optional)
+      - "853:853/tcp"         # DNS over TLS (optional)
+      - "853:853/udp"         # DNS over QUIC (optional)
+    
+    # Volume mappings for persistent data
+    volumes:
+      - ./config:/config       # All configuration and data
+    
+    # Environment variables for Garnet tuning
+    # See .env file or override here
+    env_file:
+      - .env
+    environment:
+      # These can be overridden in .env or via environment
+      GARNET_MEMORY_SIZE: "${GARNET_MEMORY_SIZE:-128m}"
+      GARNET_INDEX_SIZE: "${GARNET_INDEX_SIZE:-16m}"
+      GARNET_INDEX_MAX_SIZE: "${GARNET_INDEX_MAX_SIZE:-64m}"
+    
+    # Resource limits (optional - adjust based on your system)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '1'
+    #       memory: 256M
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "netcat-openbsd", "-z", "-v", "127.0.0.1", "53"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=adguard-dns"
+
+networks:
+  dns_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+

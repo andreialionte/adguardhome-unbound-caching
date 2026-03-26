@@ -1,0 +1,25 @@
+# Configuration and runtime files
+config/AdGuardHome/AdGuardHome.yaml
+config/garnet/data/
+config/garnet/checkpoints/
+config/userfilters/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker build artifacts
+.dockerignore
+.docker
+
+# Build and temporary files
+upstream_raw/
+*.tar.gz
+*.tar
+
+# OS files
+Thumbs.db
