@@ -48,7 +48,7 @@ RUN set -eux; \
 #############################################
 FROM alpine:3.23 AS agh_downloader
 
-ARG AGH_VERSION=${AGH_VERSION:-v0.107.73}
+ARG AGH_VERSION=${AGH_VERSION:-v0.107.72}
 ARG TARGETARCH
 
 WORKDIR /build
