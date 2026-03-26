@@ -5,9 +5,9 @@ on:
   workflow_dispatch: 
     inputs:
       tag:
-        description: 'Tag/Version to build (e.g., v0.107.70)'
+        description: 'AdGuard Home version tag (e.g., v0.107.73)'
         required: true
-        default: 'latest'
+        default: 'v0.107.73'
 
   # 2. External API trigger
   repository_dispatch:
@@ -57,7 +57,7 @@ jobs:
         uses: docker/build-push-action@v5
         
         env:
-          TAG_VALUE: ${{ github.event.client_payload.tag_name || github.event.inputs.tag || 'latest' }}
+          TAG_VALUE: ${{ github.event.client_payload.tag_name || github.event.inputs.tag || 'v0.107.73' }}
         
         with:
           context: .
