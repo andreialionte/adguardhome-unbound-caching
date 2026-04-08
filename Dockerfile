@@ -87,7 +87,8 @@ RUN apk update && apk add --no-cache \
     expat \
     libcap \
     openssl \
-    tini
+    tini \
+    netcat-openbsd
 
 # Create Unbound user and necessary directories
 RUN addgroup -S unbound && adduser -S unbound -G unbound \

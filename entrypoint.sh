@@ -94,8 +94,30 @@ else
   echo "DNSSEC root trust anchor already exists."
 fi
 # --- 5. Start Services ---
-# NOTE: Garnet is now a separate Docker service, not started here.
-# If running without docker-compose, you can start Garnet separately before this container.
+# Garnet must start first so Unbound can connect to it for caching
+
+echo "Starting Garnet (Redis-compatible cache)..."
+# Garnet runs on localhost:6379 by default
+# Run in background
+garnet --port 6379 --bind 127.0.0.1 &
+GARNET_PID=$!
+
+# Wait for Garnet to be ready
+echo "Waiting for Garnet to be ready..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+until nc -z 127.0.0.1 6379 2>/dev/null; do
+  RETRY_COUNT=$((RETRY_COUNT+1))
+  if [ $RETRY_COUNT -gt $MAX_RETRIES ]; then
+    echo "ERROR: Garnet failed to start after $MAX_RETRIES retries. Exiting."
+    kill $GARNET_PID 2>/dev/null || true
+    exit 1
+  fi
+  echo "Waiting for Garnet... ($RETRY_COUNT/$MAX_RETRIES)"
+  sleep 1
+done
+
+echo "✓ Garnet is ready on localhost:6379"
 
 echo "Starting Unbound DNS server..."
 unbound -d -c /config/unbound/unbound.conf &
