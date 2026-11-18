@@ -59,7 +59,7 @@ add_config "UNBOUND_IP_FREEBIND" "ip-freebind"
 add_config_bool "UNBOUND_IP_DSCP" "ip-dscp"
 add_config "UNBOUND_SO_RCVBUF" "so-rcvbuf"
 add_config "UNBOUND_SO_SNDBUF" "so-sndbuf"
-add_config "UNBOUND_SO_REUSEPORT" "so-reuseport"
+add_config_bool "UNBOUND_SO_REUSEPORT" "so-reuseport"
 
 # ========================================================================
 # TLS/SSL SETTINGS
@@ -67,7 +67,7 @@ add_config "UNBOUND_SO_REUSEPORT" "so-reuseport"
 add_config "UNBOUND_TLS_CERT_BUNDLE" "tls-cert-bundle"
 add_config "UNBOUND_TLS_CIPHERS" "tls-ciphers"
 add_config "UNBOUND_TLS_CIPHERSUITES" "tls-ciphersuites"
-add_config "UNBOUND_TLS_SESSION_TICKET_KEYS" "tls-session-ticket-keys"
+add_config "UNBOUND_TLS_SESSION_TICKET_KEYS" "tls-session-ticket-kys"
 add_config "UNBOUND_TLS_UPSTREAM" "tls-upstream"
 add_config_bool "UNBOUND_TLS_ADDITIONAL_PORT" "tls-additional-port"
 
@@ -156,17 +156,60 @@ add_config "UNBOUND_DOQ_UPSTREAM" "doq-upstream"
 add_config "UNBOUND_DOQ_PORT" "doq-port"
 
 # ========================================================================
-# FORWARD ZONE (Upstream DNS)
+# FORWARD ZONE (Upstream DNS) - Configurable via env
 # ========================================================================
-# This is handled by forward-queries.conf file
+# Generate forward-queries.conf from env vars
+if [ -n "${UNBOUND_FORWARD_ADDR:-}" ]; then
+  cat > "$CONFIG_D_DIR/forward-queries.conf" << EOF
+forward-zone:
+    name: "."
+    # Configured via UNBOUND_FORWARD_ADDR (comma-separated)
+    # Examples:
+    #   UNBOUND_FORWARD_ADDR=76.76.2.40,76.76.10.40,2606:1a40::40,2606:1a40:1::40
+    #   UNBOUND_FORWARD_ADDR=https://freedns.controld.com/x-hagezi-normal,quic://x-hagezi-normal.freedns.controld.com
+    #   UNBOUND_FORWARD_ADDR=76.76.2.40@853#x-hagezi-normal.freedns.controld.com
+    #   UNBOUND_FORWARD_ADDR=1.1.1.1,8.8.8.8,9.9.9.9
+EOF
+  IFS=',' read -ra ADDR <<< "$UNBOUND_FORWARD_ADDR"
+  for i in "${ADDR[@]}"; do
+    echo "    forward-addr: $i" >> "$CONFIG_D_DIR/forward-queries.conf"
+  done
+  if [ -n "${UNBOUND_FORWARD_TLS_UPSTREAM:-}" ]; then
+    echo "    forward-tls-upstream: yes" >> "$CONFIG_D_DIR/forward-queries.conf"
+  fi
+  if [ -n "${UNBOUND_FORWARD_FIRST:-}" ]; then
+    echo "    forward-first: ${UNBOUND_FORWARD_FIRST}" >> "$CONFIG_D_DIR/forward-queries.conf"
+  else
+    echo "    forward-first: no" >> "$CONFIG_D_DIR/forward-queries.conf"
+  fi
+elif [ ! -f "$CONFIG_D_DIR/forward-queries.conf" ]; then
+  # Default: Control D (Hagezi Normal) IPv4/IPv6
+  cat > "$CONFIG_D_DIR/forward-queries.conf" << 'EOF'
+forward-zone:
+    name: "."
+    # Control D (Hagezi Normal) - IPv4/IPv6 plain UDP/TCP
+    forward-addr: 76.76.2.40
+    forward-addr: 76.76.10.40
+    forward-addr: 2606:1a40::40
+    forward-addr: 2606:1a40:1::40
+    
+    # Optional protocols (commented - enable via UNBOUND_FORWARD_ADDR)
+    # DoH: forward-addr: https://freedns.controld.com/x-hagezi-normal
+    # DoQ: forward-addr: quic://x-hagezi-normal.freedns.controld.com
+    # DoT: forward-tls-upstream: yes + forward-addr: 76.76.2.40@853#...
+    # DoH3: forward-addr: https://freedns.controld.com/x-hagezi-normal
+    
+    forward-first: no
+EOF
+fi
 
 # ========================================================================
 # LOGGING
 # ========================================================================
 add_config "UNBOUND_VERBOSITY" "verbosity"
-add_config "UNBOUND_LOG_QUERIES" "log-queries"
-add_config "UNBOUND_LOG_REPLIES" "log-replies"
-add_config "UNBOUND_LOG_LOCAL_ACTIONS" "log-local-actions"
+add_config_bool "UNBOUND_LOG_QUERIES" "log-queries"
+add_config_bool "UNBOUND_LOG_REPLIES" "log-replies"
+add_config_bool "UNBOUND_LOG_LOCAL_ACTIONS" "log-local-actions"
 add_config "UNBOUND_LOG_FILE" "logfile"
 add_config "UNBOUND_LOG_TIME_ASCII" "log-time-ascii"
 add_config "UNBOUND_LOG_TAG_QUERYREPLY" "log-tag-queryreply"
@@ -178,7 +221,7 @@ add_config "UNBOUND_LOG_IDENTITY" "log-identity"
 # ========================================================================
 add_config_list "UNBOUND_ACCESS_CONTROL" "access-control"
 add_config_list "UNBOUND_INTERFACE_AUTOMATIC" "interface-automatic"
-add_config_bool "UNBOUND_CHROOT" "chroot"
+add_config "UNBOUND_CHROOT" "chroot"
 
 # ========================================================================
 # MODULE CONFIGURATION

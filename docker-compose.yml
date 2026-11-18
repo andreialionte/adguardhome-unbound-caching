@@ -95,6 +95,17 @@ GARNET_COMPACTION_FORCE_DELETE: "${GARNET_COMPACTION_FORCE_DELETE:-true}"
       UNBOUND_LOG_QUERIES: "${UNBOUND_LOG_QUERIES:-no}"
       UNBOUND_ACCESS_CONTROL: "${UNBOUND_ACCESS_CONTROL:-127.0.0.0/8 allow, 10.0.0.0/8 allow, 172.16.0.0/12 allow, 192.168.0.0/16 allow}"
       UNBOUND_MODULE_CONFIG: "${UNBOUND_MODULE_CONFIG:-validator cachedb iterator}"
+      
+      # Forward Zone (Upstream DNS) - configurable
+      # Comma-separated list of forward addresses
+      # Examples:
+      #   UNBOUND_FORWARD_ADDR=76.76.2.40,76.76.10.40,2606:1a40::40,2606:1a40:1::40
+      #   UNBOUND_FORWARD_ADDR=https://freedns.controld.com/x-hagezi-normal,quic://x-hagezi-normal.freedns.controld.com
+      #   UNBOUND_FORWARD_ADDR=76.76.2.40@853#x-hagezi-normal.freedns.controld.com,1.1.1.1@853#one.one.one.one
+      #   UNBOUND_FORWARD_ADDR=1.1.1.1,8.8.8.8,9.9.9.9
+      UNBOUND_FORWARD_ADDR: "${UNBOUND_FORWARD_ADDR:-}"
+      UNBOUND_FORWARD_TLS_UPSTREAM: "${UNBOUND_FORWARD_TLS_UPSTREAM:-}"
+      UNBOUND_FORWARD_FIRST: "${UNBOUND_FORWARD_FIRST:-no}"
     deploy:
       resources:
         limits:
