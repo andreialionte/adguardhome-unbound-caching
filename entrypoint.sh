@@ -240,42 +240,4 @@ echo "Starting Unbound DNS server..."
 unbound -d -c /config/unbound/unbound.conf &
 
 echo "Starting AdGuardHome..."
-exec /opt/AdGuardHome/AdGuardHome -c /config/AdGuardHome/AdGuardHome.yaml -w /configNET_CMD} --config-import-path ${GARNET_CONFIG_IMPORT_PATH}"
-[ -n "${GARNET_CONFIG_IMPORT_FORMAT:-}" ] && GARNET_CMD="${GARNET_CMD} --config-import-format ${GARNET_CONFIG_IMPORT_FORMAT}"
-[ -n "${GARNET_CONFIG_EXPORT_PATH:-}" ] && GARNET_CMD="${GARNET_CMD} --config-export-path ${GARNET_CONFIG_EXPORT_PATH}"
-[ -n "${GARNET_CONFIG_EXPORT_FORMAT:-}" ] && GARNET_CMD="${GARNET_CMD} --config-export-format ${GARNET_CONFIG_EXPORT_FORMAT}"
-
-# Max databases
-[ -n "${GARNET_MAX_DATABASES:-}" ] && GARNET_CMD="${GARNET_CMD} --max-databases ${GARNET_MAX_DATABASES}"
-
-# Execute
-eval ${GARNET_CMD} &
-GARNET_PID=$!
-
-# Wait for Garnet to be ready (check both Unix socket and TCP)
-echo "Waiting for Garnet to be ready..."
-MAX_RETRIES=30
-RETRY_COUNT=0
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if nc -z 127.0.0.1 6379 2>/dev/null; then
-    break
-  fi
-  RETRY_COUNT=$((RETRY_COUNT+1))
-  if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-    echo "ERROR: Garnet failed to start after $MAX_RETRIES retries. Exiting."
-    kill $GARNET_PID 2>/dev/null || true
-    exit 1
-  fi
-  echo "Waiting for Garnet... $RETRY_COUNT/$MAX_RETRIES"
-  sleep 1
-done
-
-echo "✓ Garnet is ready on Unix socket /tmp/garnet.sock and TCP 127.0.0.1:6379"
-
-echo "Starting Unbound DNS server..."
-unbound -d -c /config/unbound/unbound.conf &
-
-echo "Starting AdGuardHome..."
 exec /opt/AdGuardHome/AdGuardHome -c /config/AdGuardHome/AdGuardHome.yaml -w /config
-# force rebuild: 11/18/2026 22:08:04
-# force rebuild: 11/18/2026 22:38:51
