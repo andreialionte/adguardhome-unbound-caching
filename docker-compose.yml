@@ -45,6 +45,14 @@ services:
       GARNET_LOGLEVEL: "${GARNET_LOGLEVEL:-notice}"
       GARNET_STORAGE_TIER: "${GARNET_STORAGE_TIER:-false}"
       GARNET_CHECKPOINT_DIR: "${GARNET_CHECKPOINT_DIR:-/config/garnet/checkpoints}"
+      
+      # Disk Tier Limit (15 GB example)
+      # Enable with: GARNET_STORAGE_TIER=true
+      GARNET_SEGMENT_SIZE: "${GARNET_SEGMENT_SIZE:-1g}"
+      GARNET_COMPACTION_MAX_SEGMENTS: "${GARNET_COMPACTION_MAX_SEGMENTS:-15}"
+      GARNET_COMPACTION_FREQ: "${GARNET_COMPACTION_FREQ:-60}"
+      GARNET_COMPACTION_TYPE: "${GARNET_COMPACTION_TYPE:-Lookup}"
+      GARNET_COMPACTION_FORCE_DELETE: "${GARNET_COMPACTION_FORCE_DELETE:-true}"
     
     # Resource limits (optional - adjust based on your system)
     deploy:
