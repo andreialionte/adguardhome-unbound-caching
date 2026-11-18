@@ -200,7 +200,7 @@ fi
 [ -n "${GARNET_REVIV_FRACTION:-}" ] && GARNET_CMD="${GARNET_CMD} --reviv-fraction ${GARNET_REVIV_FRACTION}"
 [ -n "${GARNET_REVIV_SEARCH_NEXT_HIGHER_BINS:-}" ] && GARNET_CMD="${GARNET_CMD} --reviv-search-next-higher-bins ${GARNET_REVIV_SEARCH_NEXT_HIGHER_BINS}"
 [ -n "${GARNET_REVIV_BIN_BEST_FIT_SCAN_LIMIT:-}" ] && GARNET_CMD="${GARNET_CMD} --reviv-bin-best-fit-scan-limit ${GARNET_REVIV_BIN_BEST_FIT_SCAN_LIMIT}"
-[ "${GARNET_REVIV_IN_CHAIN_ONLY:-}" = "true" ] && GARNET_CMD="${GARNET_CMD} --reviv-in-chain-only"
+[ "${GARNET_REVIV_IN_CHHAIN_ONLY:-}" = "true" ] && GARNET_CMD="${GARNET_CMD} --reviv-in-chain-only"
 [ "${GARNET_MAIN_MEMORY_REPLICATION:-}" = "true" ] && GARNET_CMD="${GARNET_CMD} --main-memory-replication"
 [ "${GARNET_FAST_AOF_TRUNCATE:-}" = "true" ] && GARNET_CMD="${GARNET_CMD} --fast-aof-truncate"
 [ "${GARNET_ON_DEMAND_CHECKPOINT:-}" = "true" ] && GARNET_CMD="${GARNET_CMD} --on-demand-checkpoint"
@@ -216,17 +216,21 @@ fi
 eval ${GARNET_CMD} &
 GARNET_PID=$!
 
+# Wait for Garnet to be ready (check both Unix socket and TCP)
 echo "Waiting for Garnet to be ready..."
 MAX_RETRIES=30
 RETRY_COUNT=0
-until nc -z 127.0.0.1 6379 2>/dev/null; do
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  if nc -z 127.0.0.1 6379 2>/dev/null; then
+    break
+  fi
   RETRY_COUNT=$((RETRY_COUNT+1))
-  if [ $RETRY_COUNT -gt $MAX_RETRIES ]; then
+  if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
     echo "ERROR: Garnet failed to start after $MAX_RETRIES retries. Exiting."
     kill $GARNET_PID 2>/dev/null || true
     exit 1
   fi
-  echo "Waiting for Garnet... ($RETRY_COUNT/$MAX_RETRIES)"
+  echo "Waiting for Garnet... $RETRY_COUNT/$MAX_RETRIES"
   sleep 1
 done
 
@@ -236,10 +240,7 @@ echo "Starting Unbound DNS server..."
 unbound -d -c /config/unbound/unbound.conf &
 
 echo "Starting AdGuardHome..."
-exec /opt/AdGuardHome/AdGuardHome -c /config/AdGuardHome/AdGuardHome.yaml -w /configfreq ${GARNET_METRICS_SAMPLING_FREQ}"
-
-# Config import/export
-[ -n "${GARNET_CONFIG_IMPORT_PATH:-}" ] && GARNET_CMD="${GARNET_CMD} --config-import-path ${GARNET_CONFIG_IMPORT_PATH}"
+exec /opt/AdGuardHome/AdGuardHome -c /config/AdGuardHome/AdGuardHome.yaml -w /configNET_CMD} --config-import-path ${GARNET_CONFIG_IMPORT_PATH}"
 [ -n "${GARNET_CONFIG_IMPORT_FORMAT:-}" ] && GARNET_CMD="${GARNET_CMD} --config-import-format ${GARNET_CONFIG_IMPORT_FORMAT}"
 [ -n "${GARNET_CONFIG_EXPORT_PATH:-}" ] && GARNET_CMD="${GARNET_CMD} --config-export-path ${GARNET_CONFIG_EXPORT_PATH}"
 [ -n "${GARNET_CONFIG_EXPORT_FORMAT:-}" ] && GARNET_CMD="${GARNET_CMD} --config-export-format ${GARNET_CONFIG_EXPORT_FORMAT}"
@@ -255,14 +256,17 @@ GARNET_PID=$!
 echo "Waiting for Garnet to be ready..."
 MAX_RETRIES=30
 RETRY_COUNT=0
-until nc -z 127.0.0.1 6379 2>/dev/null; do
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  if nc -z 127.0.0.1 6379 2>/dev/null; then
+    break
+  fi
   RETRY_COUNT=$((RETRY_COUNT+1))
-  if [ $RETRY_COUNT -gt $MAX_RETRIES ]; then
+  if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
     echo "ERROR: Garnet failed to start after $MAX_RETRIES retries. Exiting."
     kill $GARNET_PID 2>/dev/null || true
     exit 1
   fi
-  echo "Waiting for Garnet... ($RETRY_COUNT/$MAX_RETRIES)"
+  echo "Waiting for Garnet... $RETRY_COUNT/$MAX_RETRIES"
   sleep 1
 done
 
@@ -273,3 +277,5 @@ unbound -d -c /config/unbound/unbound.conf &
 
 echo "Starting AdGuardHome..."
 exec /opt/AdGuardHome/AdGuardHome -c /config/AdGuardHome/AdGuardHome.yaml -w /config
+# force rebuild: 11/18/2026 22:08:04
+# force rebuild: 11/18/2026 22:38:51

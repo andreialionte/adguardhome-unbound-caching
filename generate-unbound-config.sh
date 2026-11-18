@@ -14,7 +14,7 @@ add_config() {
   local var_name="$1"
   local config_key="$2"
   local default_value="$3"
-  local value="${!var_name:-$default_value}"
+  eval "value=\${$var_name:-$default_value}"
   if [ -n "$value" ] && [ "$value" != " " ]; then
     echo "  $config_key: $value" >> "$CONFIG_FILE"
   fi
@@ -24,7 +24,7 @@ add_config_bool() {
   local var_name="$1"
   local config_key="$2"
   local default_value="$3"
-  local value="${!var_name:-$default_value}"
+  eval "value=\${$var_name:-$default_value}"
   if [ "$value" = "yes" ] || [ "$value" = "true" ] || [ "$value" = "1" ]; then
     echo "  $config_key: yes" >> "$CONFIG_FILE"
   elif [ "$value" = "no" ] || [ "$value" = "false" ] || [ "$value" = "0" ]; then
@@ -35,12 +35,14 @@ add_config_bool() {
 add_config_list() {
   local var_name="$1"
   local config_key="$2"
-  local value="${!var_name:-}"
+  eval "value=\${$var_name:-}"
   if [ -n "$value" ]; then
-    IFS=',' read -ra ADDR <<< "$value"
-    for i in "${ADDR[@]}"; do
-      echo "  $config_key: $i" >> "$CONFIG_FILE"
+    oldIFS="$IFS"
+    IFS=','
+    for i in $value; do
+      [ -n "$i" ] && echo "  $config_key: $i" >> "$CONFIG_FILE"
     done
+    IFS="$oldIFS"
   fi
 }
 
@@ -170,10 +172,12 @@ forward-zone:
     #   UNBOUND_FORWARD_ADDR=76.76.2.40@853#x-hagezi-normal.freedns.controld.com
     #   UNBOUND_FORWARD_ADDR=1.1.1.1,8.8.8.8,9.9.9.9
 EOF
-  IFS=',' read -ra ADDR <<< "$UNBOUND_FORWARD_ADDR"
-  for i in "${ADDR[@]}"; do
-    echo "    forward-addr: $i" >> "$CONFIG_D_DIR/forward-queries.conf"
+  oldIFS="$IFS"
+  IFS=','
+  for i in $UNBOUND_FORWARD_ADDR; do
+    [ -n "$i" ] && echo "    forward-addr: $i" >> "$CONFIG_D_DIR/forward-queries.conf"
   done
+  IFS="$oldIFS"
   if [ -n "${UNBOUND_FORWARD_TLS_UPSTREAM:-}" ]; then
     echo "    forward-tls-upstream: yes" >> "$CONFIG_D_DIR/forward-queries.conf"
   fi
