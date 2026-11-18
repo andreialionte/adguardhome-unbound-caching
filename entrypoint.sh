@@ -20,7 +20,11 @@ fi
 # Copy AdGuardHome configuration if volume is empty
 if [ -z "$(ls -A /config/AdGuardHome 2>/dev/null)" ]; then
   echo "Initializing default AdGuardHome configuration files..."
-  cp -r /config_default/AdGuardHome/* /config/AdGuardHome/
+  if [ -d "/config_default/AdGuardHome" ]; then
+    cp -r /config_default/AdGuardHome/* /config/AdGuardHome/
+  else
+    echo "No default AdGuardHome config found - AdGuard will generate on first run"
+  fi
 fi
 
 # # Copy unbound configuration
@@ -74,7 +78,7 @@ if [ ! -f "$ROOT_KEY_FILE" ]; then
   MAX_ANCHOR_RETRIES=5
   RETRY_COUNT=0
   # 'until' will retry the command *until* it succeeds (exit code 0)
-  until unbound-anchor -a "$ROOT_KEY_FILE" -f "$TEMP_RESOLV" || [ $RETRY_COUNT -eq $MAX_ANCHOR_RETRIES ]; do
+  until /usr/sbin/unbound-anchor -a "$ROOT_KEY_FILE" -f "$TEMP_RESOLV" || [ $RETRY_COUNT -eq $MAX_ANCHOR_RETRIES ]; do
     RETRY_COUNT=$((RETRY_COUNT+1))
     echo "unbound-anchor failed (network not ready?), retrying ($RETRY_COUNT/$MAX_ANCHOR_RETRIES) in 2s..."
     sleep 2
@@ -93,16 +97,23 @@ if [ ! -f "$ROOT_KEY_FILE" ]; then
 else
   echo "DNSSEC root trust anchor already exists."
 fi
+
 # --- 5. Start Services ---
 # Garnet must start first so Unbound can connect to it for caching
 
-echo "Starting Garnet (Redis-compatible cache)..."
-# Garnet runs on localhost:6379 by default
-# Run in background
-garnet --port 6379 --bind 127.0.0.1 &
+echo "Starting Garnet (Redis-compatible cache) with Unix socket..."
+# Garnet runs on Unix socket /tmp/garnet.sock for optimal performance
+# Also bind to 127.0.0.1:6379 for redis-cli compatibility
+garnet \
+  --config-import-path /config/garnet/redis.conf \
+  --config-import-format RedisConf \
+  --unixsocket /tmp/garnet.sock \
+  --unixsocketperm 777 \
+  --bind 127.0.0.1 \
+  --port 6379 &
 GARNET_PID=$!
 
-# Wait for Garnet to be ready
+# Wait for Garnet to be ready (check both Unix socket and TCP)
 echo "Waiting for Garnet to be ready..."
 MAX_RETRIES=30
 RETRY_COUNT=0
@@ -117,7 +128,7 @@ until nc -z 127.0.0.1 6379 2>/dev/null; do
   sleep 1
 done
 
-echo "✓ Garnet is ready on localhost:6379"
+echo "✓ Garnet is ready on Unix socket /tmp/garnet.sock and TCP 127.0.0.1:6379"
 
 echo "Starting Unbound DNS server..."
 unbound -d -c /config/unbound/unbound.conf &

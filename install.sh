@@ -323,6 +323,19 @@ GARNET_INDEX_MAX_SIZE=64m
 
 # Enable TLS encryption (requires cert.pfx in config/garnet/)
 # GARNET_TLS_ENABLED=false
+
+# ============================================================================
+# Optional Advanced Settings
+# ============================================================================
+
+# Log level (debug, verbose, notice, warning)
+GARNET_LOGLEVEL=notice
+
+# Enable storage tier for larger-than-memory datasets (requires disk space)
+# GARNET_STORAGE_TIER=false
+
+# Checkpoint directory for persistence
+# GARNET_CHECKPOINT_DIR=/config/garnet/checkpoints
 EOF
 
 	log '.env file created'

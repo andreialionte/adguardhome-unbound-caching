@@ -23,6 +23,8 @@ This image is **multi-architecture**, providing native support for both **amd64*
 - **Automatic Recovery**: Revivification engine automatically recovers freed space from expired entries
 - **Optional Storage Tier**: Extend cache beyond RAM via optional disk-backed tiering
 - **Enterprise-Grade**: Built by Microsoft for production workloads with extreme reliability
+- **Unix Socket Support**: Native Unix domain socket support (v2.2.12+) bypasses TCP stack overhead for local communication
+- **Modern .NET**: Cross-platform, no GC overhead, runs on Linux and Windows
 
 ### 🛡️ Security: Docker Hardened Image (DHI)
 This image is built upon **Docker Hardened Images (DHI)**, providing enterprise-grade security:
@@ -39,13 +41,13 @@ This container is pre-optimized for high-throughput, low-latency DNS resolution:
 
 | Metric | Value | Note |
 |--------|-------|------|
-| **Cache Latency** | <1ms | From Garnet in-memory cache |
+| **Cache Latency** | <1ms | From Garnet in-memory cache via Unix socket |
 | **Index Lookup** | O(1) | Hash table with revivification |
 | **Memory Efficiency** | 16 bytes/key | Formula: K keys = K × 16 bytes |
 | **Default Memory** | 128MB | Configurable via GARNET_MEMORY_SIZE |
 | **Unbound Slabs** | 4 | Matches num-threads to reduce lock contention |
-| **Protocol** | RESP (Redis) | Native Garnet support over TCP |
-| **Connection** | 127.0.0.1:6379 | Unbound → Garnet via localhost TCP |
+| **Protocol** | RESP (Redis) | Native Garnet support over Unix socket + TCP |
+| **Transport** | Unix Socket + TCP | `/tmp/garnet.sock` (primary) + `127.0.0.1:6379` (redis-cli) |
 | **Typical Latency** | 30-40ms | Average (includes recursive lookups) |
 
 > [!TIP]
@@ -393,8 +395,8 @@ spec:
             cpu: "1000m"
         livenessProbe:
           exec:
-            command: ["sh", "-c", "nc -z 127.0.0.1 53"]
-          initialDelaySeconds: 10
+            command: ["sh", "-c", "nc -z 127.0.0.1 53 && curl -s http://127.0.0.1:3000 > /dev/null"]
+          initialDelaySeconds: 15
           periodSeconds: 30
           timeoutSeconds: 5
       volumes:
@@ -644,9 +646,12 @@ docker compose ps
 ### Verify Garnet Connection
 
 ```bash
-# Test Garnet from inside container
+# Test Garnet from inside container (TCP for redis-cli)
 docker exec adguard-unbound-caching redis-cli ping
 # Should respond: PONG
+
+# Test Garnet via Unix socket (faster)
+docker exec adguard-unbound-caching redis-cli -s /tmp/garnet.sock ping
 
 # View Garnet stats
 docker exec adguard-unbound-caching redis-cli INFO stats | head -20
@@ -682,6 +687,9 @@ docker exec adguard-unbound-caching redis-cli INFO stats | grep -E "keyspace_hit
 
 # Memory usage trend (collect over time)
 watch -n 5 'docker exec adguard-unbound-caching redis-cli INFO memory | grep used_memory'
+
+# Garnet-specific stats (revivification, index, etc.)
+docker exec adguard-unbound-caching redis-cli INFO garnet
 ```
 
 ### Common Issues & Solutions
@@ -696,7 +704,7 @@ docker exec adguard-unbound-caching unbound-checkconf
 docker exec adguard-unbound-caching nslookup -server 127.0.0.1 google.com
 ```
 
-**Solution**: Verify Garnet is running and accessible on port 6379
+**Solution**: Verify Garnet is running and accessible on Unix socket `/tmp/garnet.sock`
 
 #### ✗ High memory usage
 
@@ -910,8 +918,8 @@ Garnet caching backend (auto-generated):
 ```conf
 cachedb:
     backend: redis
-    redis-server-host: 127.0.0.1
-    redis-server-port: 6379
+    cachedb-no-store: no
+    redis-server-path: /tmp/garnet.sock
     redis-timeout: 100
     cachedb-no-store: no
 ```
@@ -925,8 +933,11 @@ bind 127.0.0.1
 port 6379
 maxmemory 128mb
 maxmemory-policy allkeys-lru
-appendonly yes
+daemonize no
 loglevel notice
+dir /config/garnet/data
+# Unix socket configured via entrypoint.sh command line
+# --unixsocket /tmp/garnet.sock --unixsocketperm 777
 ```
 
 ---
@@ -957,7 +968,8 @@ MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: November 2025  
 **Multi-Arch**: ✅ amd64, ✅ arm64  
 **Docker Min Version**: 20.10+  
 **Docker Compose Version**: 2.0+  
+**Garnet Version**: v2.2.12  

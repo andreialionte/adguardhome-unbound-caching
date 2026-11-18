@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
 #############################################
-# Stage 1: Builder (Compiles Unbound)
+# Stage 1: Builder (Compiles Unbound on Ubuntu for glibc compatibility)
 #############################################
-FROM alpine:3.23 AS unbound_builder
+FROM ubuntu:24.04 AS unbound_builder
 
 ARG UNBOUND_URL="https://nlnetlabs.nl/downloads/unbound/unbound-latest.tar.gz"
 ARG TARGETARCH
@@ -11,17 +11,19 @@ ARG TARGETARCH
 WORKDIR /build
 
 # Install build dependencies
-RUN apk add --no-cache \
-    build-base \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
     curl \
-    openssl-dev \
-    expat-dev \
-    hiredis-dev \
+    libssl-dev \
+    libexpat1-dev \
+    libhiredis-dev \
     libevent-dev \
     libcap-dev \
     perl \
-    linux-headers \
-    wget
+    linux-headers-generic \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Compile Unbound from source with hiredis (cachedb) support
 RUN set -eux; \
@@ -46,17 +48,15 @@ RUN set -eux; \
 #############################################
 # Stage 2: Download AdGuard Home
 #############################################
-FROM alpine:3.23 AS agh_downloader
+FROM ubuntu:24.04 AS agh_downloader
 
 ARG AGH_VERSION=v0.107.73
 ARG TARGETARCH
 
 WORKDIR /build
 
-# Ensure /build is writable and has proper permissions
-RUN mkdir -p /build && chmod 777 /build
-
-RUN apk add --no-cache wget
+RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
     VERSION="${AGH_VERSION}"; \
@@ -70,30 +70,43 @@ RUN set -eux; \
     ls -la /build/agh
 
 #############################################
-# Stage 3: Runtime (Pre-built Garnet + Unbound + AdGuard)
+# Stage 3: Runtime (Garnet Noble base + Unbound + AdGuard)
 #############################################
-FROM ghcr.io/microsoft/garnet-alpine:latest
+FROM ghcr.io/microsoft/garnet-noble:latest AS runtime_base
 
 ARG TARGETARCH
 
 # Explicitly run as root for package management
 USER root
 
-# Update APK cache and install runtime dependencies
-RUN apk update && apk add --no-cache \
+# Install runtime dependencies (Ubuntu 24.04 noble)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    libevent \
-    hiredis \
-    expat \
-    libcap \
+    libevent-2.1-7t64 \
+    libhiredis1.1.0 \
+    libexpat1 \
+    libcap2 \
     openssl \
     tini \
-    netcat-openbsd
+    netcat-openbsd \
+    libstdc++6 \
+    libgcc-s1 \
+    passwd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create tini symlink if needed
+RUN ln -sf /usr/bin/tini /sbin/tini
 
 # Create Unbound user and necessary directories
-RUN addgroup -S unbound && adduser -S unbound -G unbound \
-    && mkdir -p /etc/unbound/var /config /config/garnet /config/unbound /config/AdGuardHome /opt/adguardhome/work \
+RUN groupadd --system unbound && useradd --system --gid unbound --no-create-home --shell /usr/sbin/nologin unbound \
+    && mkdir -p /etc/unbound/var /config /config/garnet /config/garnet/data /config/garnet/checkpoints /config/unbound /config/unbound/unbound.conf.d /config/AdGuardHome /opt/adguardhome/work \
     && chown -R unbound:unbound /etc/unbound
+
+# Copy Garnet from Garnet Noble image (includes all dependencies in /app)
+RUN cp -r /app /usr/local/garnet && chmod +x /usr/local/garnet/GarnetServer
+
+# Create garnet symlink for compatibility
+RUN ln -sf /usr/local/garnet/GarnetServer /usr/local/bin/garnet
 
 # Copy compiled Unbound from builder
 COPY --from=unbound_builder /build/install/usr/sbin/unbound /usr/sbin/unbound

@@ -32,31 +32,40 @@ services:
     env_file:
       - .env
     environment:
-      # These can be overridden in .env or via environment
+      # Garnet Memory Configuration (passed to entrypoint.sh)
       GARNET_MEMORY_SIZE: "${GARNET_MEMORY_SIZE:-128m}"
       GARNET_INDEX_SIZE: "${GARNET_INDEX_SIZE:-16m}"
       GARNET_INDEX_MAX_SIZE: "${GARNET_INDEX_MAX_SIZE:-64m}"
+      
+      # Optional Security
+      GARNET_PASSWORD: "${GARNET_PASSWORD:-}"
+      GARNET_TLS_ENABLED: "${GARNET_TLS_ENABLED:-false}"
+      
+      # Optional Advanced
+      GARNET_LOGLEVEL: "${GARNET_LOGLEVEL:-notice}"
+      GARNET_STORAGE_TIER: "${GARNET_STORAGE_TIER:-false}"
+      GARNET_CHECKPOINT_DIR: "${GARNET_CHECKPOINT_DIR:-/config/garnet/checkpoints}"
     
     # Resource limits (optional - adjust based on your system)
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '2'
-    #       memory: 512M
-    #     reservations:
-    #       cpus: '1'
-    #       memory: 256M
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
     
     # Restart policy
     restart: unless-stopped
     
-    # Health check
+    # Health check - tests both DNS and Web UI
     healthcheck:
-      test: ["CMD", "netcat-openbsd", "-z", "-v", "127.0.0.1", "53"]
+      test: ["CMD", "sh", "-c", "nc -z 127.0.0.1 53 && curl -s http://127.0.0.1:3000 > /dev/null"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     
     # Logging configuration
     logging:
