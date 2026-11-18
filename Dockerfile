@@ -121,7 +121,8 @@ COPY --from=agh_downloader /build/agh/AdGuardHome/AdGuardHome /opt/AdGuardHome/A
 # Copy configuration files and entrypoint
 COPY config/ /config_default
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY generate-unbound-config.sh /usr/local/bin/generate-unbound-config.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/generate-unbound-config.sh
 
 # Expose required ports
 EXPOSE 53/tcp 53/udp 67/udp 68/udp 80/tcp 443/tcp 443/udp \
